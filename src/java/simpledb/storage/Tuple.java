@@ -1,18 +1,19 @@
 package simpledb.storage;
 
+import simpledb.common.Type;
+
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Iterator;
+import java.util.*;
 
 /**
  * Tuple maintains information about the contents of a tuple. Tuples have a
  * specified schema specified by a TupleDesc object and contain Field objects
  * with the data for each field.
  */
+
 public class Tuple implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
     /**
      * Create a new tuple with the specified schema (type).
      *
@@ -20,7 +21,35 @@ public class Tuple implements Serializable {
      *            the schema of this tuple. It must be a valid TupleDesc
      *            instance with at least one field.
      */
+    private List<Field> tuple;
+    private TupleDesc tupleDesc;
+    private RecordId recordId=new RecordId(new PageId() {
+        @Override
+        public int[] serialize() {
+            return new int[0];
+        }
+
+        @Override
+        public int getTableId() {
+            return 0;
+        }
+
+        @Override
+        public int getPageNumber() {
+            return 0;
+        }
+    },0);
     public Tuple(TupleDesc td) {
+//        Type types[]=new Type[td.getSize()];
+//        String names[]=new String[td.getSize()];
+//        for(int i=0;i<td.getSize();i++)
+//        {
+//            types[i]=td.getFieldType(i);
+//            names[i]=td.getFieldName(i);
+//        }
+//        tupleDesc=new TupleDesc(types,names);
+        tupleDesc=td;
+        tuple=new ArrayList<>(Collections.nCopies(td.getSize(),null));
         // some code goes here
     }
 
@@ -29,7 +58,7 @@ public class Tuple implements Serializable {
      */
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        return this.tupleDesc;
     }
 
     /**
@@ -38,7 +67,7 @@ public class Tuple implements Serializable {
      */
     public RecordId getRecordId() {
         // some code goes here
-        return null;
+        return this.recordId;
     }
 
     /**
@@ -49,6 +78,7 @@ public class Tuple implements Serializable {
      */
     public void setRecordId(RecordId rid) {
         // some code goes here
+        this.recordId=rid;
     }
 
     /**
@@ -60,6 +90,8 @@ public class Tuple implements Serializable {
      *            new value for the field.
      */
     public void setField(int i, Field f) {
+        if(i>=0&&i<this.tuple.size())
+            this.tuple.set(i,f);
         // some code goes here
     }
 
@@ -71,7 +103,10 @@ public class Tuple implements Serializable {
      */
     public Field getField(int i) {
         // some code goes here
-        return null;
+        if((i>=0)&&(i<this.tuple.size()))
+            return this.tuple.get(i);
+        else
+            return null;
     }
 
     /**
@@ -84,7 +119,14 @@ public class Tuple implements Serializable {
      */
     public String toString() {
         // some code goes here
-        throw new UnsupportedOperationException("Implement this");
+        StringBuilder res=new StringBuilder("");
+        for(int i=0;i<this.tuple.size();i++){
+            res.append(this.tuple.get(i).toString());
+            if(i!=this.tuple.size()-1)
+                res.append(" ");
+        }
+        return res.toString();
+//        throw new UnsupportedOperationException("Implement this");
     }
 
     /**
@@ -94,14 +136,38 @@ public class Tuple implements Serializable {
     public Iterator<Field> fields()
     {
         // some code goes here
-        return null;
+        return new tupleTtr(this.tuple);
     }
+    private class tupleTtr implements Iterator<Field> {
+        private List<Field> list;
+        private int position=0;
 
+        tupleTtr(List<Field> list)
+        {
+            this.list=list;
+        }
+
+
+        public boolean hasNext() {
+            return position <list.size();
+        }
+
+
+        public Field next() {
+            int i = position;
+            if (i >= list.size())
+                throw new NoSuchElementException();
+            Field item=list.get(i);
+            position = i + 1;
+            return item;
+        }
+    }
     /**
      * reset the TupleDesc of this tuple (only affecting the TupleDesc)
      * */
     public void resetTupleDesc(TupleDesc td)
     {
+        this.tupleDesc=td;
         // some code goes here
     }
 }

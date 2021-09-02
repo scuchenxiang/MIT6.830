@@ -29,8 +29,12 @@ public class HeapFile implements DbFile {
      *            the file that stores the on-disk backing store for this heap
      *            file.
      */
+    private File file;
+    private TupleDesc tupleDesc;
     public HeapFile(File f, TupleDesc td) {
         // some code goes here
+        file=f;
+        tupleDesc=td;
     }
 
     /**
@@ -40,7 +44,7 @@ public class HeapFile implements DbFile {
      */
     public File getFile() {
         // some code goes here
-        return null;
+        return file;
     }
 
     /**
@@ -52,9 +56,10 @@ public class HeapFile implements DbFile {
      * 
      * @return an ID uniquely identifying this HeapFile.
      */
+    //return the absolutePath's hashcode as the tableId
     public int getId() {
+        return file.getAbsoluteFile().hashCode();
         // some code goes here
-        throw new UnsupportedOperationException("implement this");
     }
 
     /**
@@ -63,8 +68,8 @@ public class HeapFile implements DbFile {
      * @return TupleDesc of this DbFile.
      */
     public TupleDesc getTupleDesc() {
+        return tupleDesc;
         // some code goes here
-        throw new UnsupportedOperationException("implement this");
     }
 
     // see DbFile.java for javadocs

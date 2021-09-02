@@ -27,7 +27,33 @@ public class Catalog {
      * Constructor.
      * Creates a new, empty catalog.
      */
+    private class Table{
+        private DbFile dbFile;
+        private String name;
+        private String pkeyField;
+        public Table(DbFile dbFile,String name,String pkeyField)
+        {
+            this.dbFile=dbFile;
+            this.name=name;
+            this.pkeyField=pkeyField;
+        }
+        public DbFile getDbFile()
+        {
+            return dbFile;
+        }
+        public String getName()
+        {
+            return name;
+        }
+        public String getPkeyField()
+        {
+            return pkeyField;
+        }
+    }
+    private HashMap<Integer,Table> id2Tb=new HashMap<>();
+    private HashMap<String,Integer> name2TbID=new HashMap<>();
     public Catalog() {
+
         // some code goes here
     }
 
@@ -41,6 +67,25 @@ public class Catalog {
      * @param pkeyField the name of the primary key field
      */
     public void addTable(DbFile file, String name, String pkeyField) {
+        if(name==null)
+            return;
+        if(this.name2TbID.containsKey(name))
+        {
+            Table table=new Table(file,name,pkeyField);
+            int id=file.getId();
+
+            id2Tb.remove(this.name2TbID.get(name));
+            //添加新的
+            id2Tb.put(id,table);
+            name2TbID.put(name,id);
+        }
+        else
+        {
+            Table table=new Table(file,name,pkeyField);
+            int id=file.getId();
+            name2TbID.put(name,id);
+            id2Tb.put(id,table);
+        }
         // some code goes here
     }
 
@@ -65,7 +110,12 @@ public class Catalog {
      */
     public int getTableId(String name) throws NoSuchElementException {
         // some code goes here
-        return 0;
+        if(this.name2TbID.containsKey(name))
+            return this.name2TbID.get(name);
+        else
+        {
+            throw new NoSuchElementException();
+        }
     }
 
     /**
@@ -76,7 +126,14 @@ public class Catalog {
      */
     public TupleDesc getTupleDesc(int tableid) throws NoSuchElementException {
         // some code goes here
-        return null;
+        if(id2Tb.containsKey(tableid))
+        {
+            return id2Tb.get(tableid).getDbFile().getTupleDesc();
+        }
+        else
+        {
+            throw new NoSuchElementException();
+        }
     }
 
     /**
@@ -87,26 +144,68 @@ public class Catalog {
      */
     public DbFile getDatabaseFile(int tableid) throws NoSuchElementException {
         // some code goes here
-        return null;
+        if(id2Tb.containsKey(tableid))
+        {
+            return id2Tb.get(tableid).getDbFile();
+        }
+        else
+        {
+            throw new NoSuchElementException();
+        }
     }
 
     public String getPrimaryKey(int tableid) {
         // some code goes here
-        return null;
+        if(id2Tb.containsKey(tableid))
+        {
+            return id2Tb.get(tableid).getName();
+        }
+        else
+        {
+            throw new NoSuchElementException();
+        }
     }
 
     public Iterator<Integer> tableIdIterator() {
         // some code goes here
-        return null;
+
+        return new cataLog(this.name2TbID);
+    }
+    private class cataLog implements Iterator<Integer> {
+        private int name;
+        private Iterator<HashMap.Entry<String,Integer>> name2TbIDIt;
+        public cataLog(HashMap<String,Integer> name2TbID)
+        {
+            name2TbIDIt=name2TbID.entrySet().iterator();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return name2TbIDIt.hasNext();
+        }
+
+        @Override
+        public Integer next() {
+            return name2TbIDIt.next().getValue();
+        }
     }
 
     public String getTableName(int id) {
         // some code goes here
-        return null;
+        if(id2Tb.containsKey(id))
+        {
+            return id2Tb.get(id).getName();
+        }
+        else
+        {
+            return null;
+        }
     }
     
     /** Delete all tables from the catalog */
     public void clear() {
+        id2Tb.clear();
+        name2TbID.clear();
         // some code goes here
     }
     

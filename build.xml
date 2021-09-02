@@ -213,12 +213,14 @@
 
     <target name="testcompile" depends="compile" description="Compile all unit and system tests">
         <Compile srcdir="${testd}" destdir="${build.test}">
+
             <classpath refid="classpath.test"/>
         </Compile>
     </target>
 
     <target name="test" depends="testcompile" description="Run all unit tests">
         <RunJunit>
+
             <batchtest>
                 <fileset dir="${build.test}">
                     <include name="**/*Test.class"/>

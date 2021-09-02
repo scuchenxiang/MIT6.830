@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class BufferPool {
     /** Bytes per page, including header. */
+    //for every page,the size is 4kb
     private static final int DEFAULT_PAGE_SIZE = 4096;
 
     private static int pageSize = DEFAULT_PAGE_SIZE;
@@ -31,6 +32,7 @@ public class BufferPool {
     /** Default number of pages passed to the constructor. This is used by
     other classes. BufferPool should use the numPages argument to the
     constructor instead. */
+    //default Num page 50
     public static final int DEFAULT_PAGES = 50;
 
     /**
@@ -38,7 +40,11 @@ public class BufferPool {
      *
      * @param numPages maximum number of pages in this buffer pool.
      */
+
+    private int numPages;
+    private ConcurrentHashMap<PageId,Page> bufferPool;
     public BufferPool(int numPages) {
+        numPages=numPages;
         // some code goes here
     }
     
@@ -72,9 +78,25 @@ public class BufferPool {
      * @param perm the requested permissions on the page
      */
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
-        throws TransactionAbortedException, DbException {
+            throws TransactionAbortedException, DbException {
+        if(bufferPool.containsKey(pid))
+        {
+            return bufferPool.get(pid);
+        }
+        else
+        {
+            if(bufferPool.size()<numPages)
+            {
+                Page page=Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid);
+                bufferPool.put(pid,page);
+                return page;
+            }
+            else
+            {
+                throw new DbException("bufferPool error:bufferPool is full");
+            }
+        }
         // some code goes here
-        return null;
     }
 
     /**
