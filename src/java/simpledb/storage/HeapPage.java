@@ -73,18 +73,17 @@ public class HeapPage implements Page {
     */
     private int getNumTuples() {        
         // some code goes here
-        return 0;
-
+        return BufferPool.getPageSize()*8/(td.getSize()*8+1);
+//        return numSlots;
     }
 
     /**
      * Computes the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      * @return the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      */
-    private int getHeaderSize() {        
-        
+    private int getHeaderSize() {
         // some code goes here
-        return 0;
+        return (this.getNumTuples()+7)/8;
                  
     }
     
@@ -118,7 +117,7 @@ public class HeapPage implements Page {
      */
     public HeapPageId getId() {
     // some code goes here
-    throw new UnsupportedOperationException("implement this");
+        return this.pid;
     }
 
     /**
@@ -288,15 +287,28 @@ public class HeapPage implements Page {
      */
     public int getNumEmptySlots() {
         // some code goes here
-        return 0;
+        int res=0;
+        for(int i=0;i<this.numSlots;i++)
+        {
+            if(!isSlotUsed(i))
+                res++;
+        }
+        return res;
     }
 
     /**
      * Returns true if associated slot on this page is filled.
      */
     public boolean isSlotUsed(int i) {
-        // some code goes here
+        if(i<numSlots)
+        {//i start in 0
+            int i_th=(i)/8;
+            int i_bit=i%8;
+            byte mybyte=header[i_th];
+            return ((1<<i_bit)&mybyte)!=0;
+        }
         return false;
+        // some code goes here
     }
 
     /**
@@ -313,7 +325,39 @@ public class HeapPage implements Page {
      */
     public Iterator<Tuple> iterator() {
         // some code goes here
-        return null;
+        return new Itr();
+    }
+
+    private class Itr implements Iterator
+    {
+        private final Iterator<Tuple> iterator;
+        public Itr()
+        {
+            List<Tuple> list=new ArrayList<>();
+            for(int i=0;i<numSlots;i++)
+            {
+                if(isSlotUsed(i))
+                {
+                    list.add(tuples[i]);
+                }
+            }
+            iterator=list.iterator();
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("TupleIterator: remove not supported");
+        }
+
+        @Override
+        public boolean hasNext() {
+            return iterator.hasNext();
+        }
+
+        @Override
+        public Object next() {
+            return iterator.next();
+        }
     }
 
 }

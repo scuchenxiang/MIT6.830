@@ -146,6 +146,7 @@ public class TupleDesc implements Serializable {
      * @return The size (in bytes) of tuples corresponding to this TupleDesc.
      *         Note that tuples from a given TupleDesc are of a fixed size.
      */
+    //this is the byte of the tupledesc,not the length
     public int getSize() {
         // some code goes here
         int size = 0;

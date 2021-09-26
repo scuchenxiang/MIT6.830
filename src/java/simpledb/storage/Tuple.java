@@ -40,14 +40,6 @@ public class Tuple implements Serializable {
         }
     },0);
     public Tuple(TupleDesc td) {
-//        Type types[]=new Type[td.getSize()];
-//        String names[]=new String[td.getSize()];
-//        for(int i=0;i<td.getSize();i++)
-//        {
-//            types[i]=td.getFieldType(i);
-//            names[i]=td.getFieldName(i);
-//        }
-//        tupleDesc=new TupleDesc(types,names);
         tupleDesc=td;
         tuple=new ArrayList<>(Collections.nCopies(td.getSize(),null));
         // some code goes here

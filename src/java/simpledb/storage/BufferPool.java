@@ -40,11 +40,11 @@ public class BufferPool {
      *
      * @param numPages maximum number of pages in this buffer pool.
      */
-
     private int numPages;
     private ConcurrentHashMap<PageId,Page> bufferPool;
     public BufferPool(int numPages) {
-        numPages=numPages;
+        this.numPages=numPages;
+        this.bufferPool=new ConcurrentHashMap<>(this.numPages);
         // some code goes here
     }
     
