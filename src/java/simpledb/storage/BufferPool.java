@@ -1,14 +1,13 @@
 package simpledb.storage;
 
-import simpledb.common.Database;
-import simpledb.common.Permissions;
-import simpledb.common.DbException;
-import simpledb.common.DeadlockException;
+import simpledb.common.*;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
 
 import java.io.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -161,6 +160,13 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        DbFile dbFile=Database.getCatalog().getDatabaseFile(tableId);
+        List<Page> pages=dbFile.insertTuple(tid,t);
+        for( Page page:pages)
+        {
+            page.markDirty(true,tid);
+            bufferPool.put(page.getId(),page);
+        }
     }
 
     /**
@@ -180,6 +186,13 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        DbFile dbFile=Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
+        List<Page> pages=dbFile.deleteTuple(tid,t);
+        for(Page page:pages)
+        {
+            page.markDirty(true,tid);
+            bufferPool.put(page.getId(),page);
+        }
     }
 
     /**
@@ -204,6 +217,7 @@ public class BufferPool {
     public synchronized void discardPage(PageId pid) {
         // some code goes here
         // not necessary for lab1
+        bufferPool.remove(pid);
     }
 
     /**
@@ -213,6 +227,14 @@ public class BufferPool {
     private synchronized  void flushPage(PageId pid) throws IOException {
         // some code goes here
         // not necessary for lab1
+        if(bufferPool.containsKey(pid))
+        {
+            Page pg=bufferPool.get(pid);
+            if(pg.isDirty()!=null)
+            {
+                Database.getCatalog().getDatabaseFile(pg.getId().getTableId()).writePage(pg);
+            }
+        }
     }
 
     /** Write all pages of the specified transaction to disk.
@@ -226,9 +248,29 @@ public class BufferPool {
      * Discards a page from the buffer pool.
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
+    private Page myevictPage()
+    {
+        int bfsize=bufferPool.size();
+        if(bfsize>0)
+        {
+            Page pg=new ArrayList<Page>(bufferPool.values()).get(0);
+            return pg;
+        }
+        return null;
+    }
     private synchronized  void evictPage() throws DbException {
         // some code goes here
         // not necessary for lab1
+        Page pg=myevictPage();
+        //also can use LRU algorithm to implement
+        PageId pageId=pg.getId();
+        try{
+            flushPage(pageId);
+            discardPage(pageId);
+        }catch (IOException e)
+        {
+            throw new DbException("evictpage error");
+        }
     }
 
 }

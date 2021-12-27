@@ -21,7 +21,7 @@ public class Tuple implements Serializable {
      *            the schema of this tuple. It must be a valid TupleDesc
      *            instance with at least one field.
      */
-    private List<Field> tuple;
+    private List<Field> tuple;//table每行存的数据
     private TupleDesc tupleDesc;
     private RecordId recordId=new RecordId(new PageId() {
         @Override

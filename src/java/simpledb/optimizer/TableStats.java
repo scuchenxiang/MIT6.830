@@ -6,10 +6,12 @@ import simpledb.execution.Predicate;
 import simpledb.execution.SeqScan;
 import simpledb.storage.*;
 import simpledb.transaction.Transaction;
+import simpledb.transaction.TransactionId;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -78,6 +80,15 @@ public class TableStats {
      *            The cost per page of IO. This doesn't differentiate between
      *            sequential-scan IO and disk seeks.
      */
+    private HashMap<Integer,IntHistogram> intHistogram;
+    private HashMap<Integer,StringHistogram> stringHistogram;
+    private DbFile dbFile;
+    private TupleDesc tupleDesc;
+    private int numsfield;
+    private int tableid;
+    private int iocostperpage;
+    private int numspage;
+    private int numTuples;
     public TableStats(int tableid, int ioCostPerPage) {
         // For this function, you'll have to get the
         // DbFile for the table in question,
@@ -87,8 +98,96 @@ public class TableStats {
         // necessarily have to (for example) do everything
         // in a single scan of the table.
         // some code goes here
-    }
+        intHistogram=new HashMap<Integer,IntHistogram>();
+        stringHistogram=new HashMap<Integer,StringHistogram>();
+        this.tableid=tableid;
+        this.iocostperpage=ioCostPerPage;
 
+        dbFile=Database.getCatalog().getDatabaseFile(tableid);
+        this.numspage=((HeapFile)dbFile).numPages();
+        this.tupleDesc=dbFile.getTupleDesc();
+        numsfield=tupleDesc.numFields();
+        int[] mins=new int[numsfield];
+        int[] maxs=new int[numsfield];
+        TransactionId id=new TransactionId();
+        SeqScan seqScan=new SeqScan(id,tableid,"");
+        numTuples=0;
+        try
+        {
+            seqScan.open();
+            for(int i=0;i<numsfield;i++)
+            {
+                maxs[i]=Integer.MIN_VALUE;
+                mins[i]=Integer.MAX_VALUE;
+                if(tupleDesc.getFieldType(i).equals(Type.STRING_TYPE))
+                    continue;
+                while (seqScan.hasNext())
+                {
+                    if(i==0)
+                        numTuples++;
+                    Tuple tuple=seqScan.next();
+                    IntField field=(IntField) tuple.getField(i);
+                    int val=field.getValue();
+                    if(val>maxs[i])
+                        maxs[i]=val;
+                    if(val<mins[i])
+                        mins[i]=val;
+                }
+                seqScan.rewind();
+            }
+            seqScan.close();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+        for(int i=0;i<numsfield;i++)
+        {
+            if(tupleDesc.getFieldType(i).equals(Type.INT_TYPE))
+            {
+                IntHistogram intHistogram1=new IntHistogram(NUM_HIST_BINS,mins[i],maxs[i]);
+                intHistogram.put(i,intHistogram1);
+            }
+            if(tupleDesc.getFieldType(i).equals(Type.STRING_TYPE))
+            {
+                StringHistogram stringHistogram1=new StringHistogram(NUM_HIST_BINS);
+                stringHistogram.put(i,stringHistogram1);
+            }
+        }
+        addvalues2Hist();
+
+    }
+    public void addvalues2Hist()
+    {
+        TransactionId id=new TransactionId();
+        SeqScan seqScan=new SeqScan(id,tableid,"");
+        try {
+            seqScan.open();
+            while (seqScan.hasNext())
+            {
+                Tuple tuple=seqScan.next();
+                for(int i=0;i<numsfield;i++)
+                {
+                    Field field=tuple.getField(i);
+                    if(tupleDesc.getFieldType(i).equals(Type.INT_TYPE))
+                    {
+                        IntField intField=(IntField)field;
+                        intHistogram.get(i).addValue(intField.getValue());
+                    }
+                    if(tupleDesc.getFieldType(i).equals(Type.STRING_TYPE))
+                    {
+                        StringField stringField=(StringField)field;
+                        stringHistogram.get(i).addValue(stringField.getValue());
+                    }
+                }
+            }
+            seqScan.close();
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+
+    }
     /**
      * Estimates the cost of sequentially scanning the file, given that the cost
      * to read a page is costPerPageIO. You can assume that there are no seeks
@@ -103,7 +202,7 @@ public class TableStats {
      */
     public double estimateScanCost() {
         // some code goes here
-        return 0;
+        return this.iocostperpage*this.numspage;
     }
 
     /**
@@ -132,7 +231,14 @@ public class TableStats {
      * */
     public double avgSelectivity(int field, Predicate.Op op) {
         // some code goes here
-        return 1.0;
+        if(tupleDesc.getFieldType(field).equals(Type.INT_TYPE))
+        {
+            return intHistogram.get(field).avgSelectivity();
+        }
+        else //(constant.getType().equals(Type.STRING_TYPE))
+        {
+            return stringHistogram.get(field).avgSelectivity();
+        }
     }
 
     /**
@@ -150,7 +256,14 @@ public class TableStats {
      */
     public double estimateSelectivity(int field, Predicate.Op op, Field constant) {
         // some code goes here
-        return 1.0;
+        if(constant.getType().equals(Type.INT_TYPE))
+        {
+            return intHistogram.get(field).estimateSelectivity(op,((IntField)constant).getValue());
+        }
+        else //(constant.getType().equals(Type.STRING_TYPE))
+        {
+            return stringHistogram.get(field).estimateSelectivity(op,((StringField)constant).getValue());
+        }
     }
 
     /**
@@ -158,7 +271,22 @@ public class TableStats {
      * */
     public int totalTuples() {
         // some code goes here
-        return 0;
+        TransactionId id=new TransactionId();
+        SeqScan seqScan=new SeqScan(id,tableid,"");
+        int res=0;
+        try {
+            seqScan.open();
+            while (seqScan.hasNext())
+            {
+                res++;
+                seqScan.next();
+            }
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+        seqScan.close();
+        return res;
     }
 
 }

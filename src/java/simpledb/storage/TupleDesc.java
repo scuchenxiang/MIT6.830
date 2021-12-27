@@ -35,7 +35,7 @@ public class TupleDesc implements Serializable {
             return fieldName + "(" + fieldType + ")";
         }
     }
-    private List<TDItem> itemList;
+    private List<TDItem> itemList;//���ݿ�table��ģʽ��ÿһ��Ԫ�ذ���ÿһ�е����ֺ�����
     /**
      * @return
      *        An iterator which iterates over all the field TDItems

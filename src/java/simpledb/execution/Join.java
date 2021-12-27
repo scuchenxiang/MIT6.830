@@ -1,5 +1,6 @@
 package simpledb.execution;
 
+import simpledb.common.Type;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.common.DbException;
 import simpledb.storage.Tuple;
@@ -13,7 +14,11 @@ import java.util.*;
 public class Join extends Operator {
 
     private static final long serialVersionUID = 1L;
-
+    private JoinPredicate p;
+    private OpIterator child1;
+    private OpIterator child2;
+    private Tuple left;
+    private Tuple right;
     /**
      * Constructor. Accepts two children to join and the predicate to join them
      * on
@@ -27,11 +32,16 @@ public class Join extends Operator {
      */
     public Join(JoinPredicate p, OpIterator child1, OpIterator child2) {
         // some code goes here
+        this.p=p;
+        this.child1=child1;
+        this.child2=child2;
+        this.left=null;
+        this.left=null;
     }
 
     public JoinPredicate getJoinPredicate() {
         // some code goes here
-        return null;
+        return this.p;
     }
 
     /**
@@ -41,7 +51,7 @@ public class Join extends Operator {
      * */
     public String getJoinField1Name() {
         // some code goes here
-        return null;
+        return child1.getTupleDesc().getFieldName(p.getField1());
     }
 
     /**
@@ -51,7 +61,7 @@ public class Join extends Operator {
      * */
     public String getJoinField2Name() {
         // some code goes here
-        return null;
+        return child2.getTupleDesc().getFieldName(p.getField2());
     }
 
     /**
@@ -60,20 +70,48 @@ public class Join extends Operator {
      */
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        TupleDesc tupleDesc1=child1.getTupleDesc();
+        TupleDesc tupleDesc2=child2.getTupleDesc();
+        Type [] types=new Type[tupleDesc1.numFields()+tupleDesc2.numFields()];
+        String[] names=new String[tupleDesc1.numFields()+tupleDesc2.numFields()];
+        for(int i=0;i<tupleDesc1.numFields();i++)
+        {
+            types[i]=tupleDesc1.getFieldType(i);
+            names[i]=tupleDesc1.getFieldName(i);
+        }
+        for(int i=0;i<tupleDesc2.numFields();i++)
+        {
+            types[i+tupleDesc1.numFields()]=tupleDesc2.getFieldType(i);
+            names[i+tupleDesc1.numFields()]=tupleDesc2.getFieldName(i);
+        }
+        return new TupleDesc(types,names);
     }
 
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         // some code goes here
+        super.open();
+        child1.open();
+        child2.open();
+        if(child1.hasNext())
+            left=child1.next();
+        if (child2.hasNext())
+            right=child2.next();
     }
 
     public void close() {
         // some code goes here
+        left=null;
+        right=null;
+        child1.close();
+        child2.close();
+        super.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
+        this.close();
+        this.open();
     }
 
     /**
@@ -96,18 +134,57 @@ public class Join extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
+        while (left!=null||right!=null)
+        {//first get the res, then update left and right
+            Tuple res=null;
+            if(p.filter(left,right))
+            {
+                res=new Tuple(this.getTupleDesc());
+                for(int i=0;i<left.getTupleDesc().numFields();i++)
+                {
+                    res.setField(i,left.getField(i));
+                }
+                for(int i=0;i<right.getTupleDesc().numFields();i++)
+                {
+                    res.setField(i+left.getTupleDesc().numFields(),right.getField(i));
+                }
+            }
+            if(child2.hasNext())
+            {
+                right=child2.next();
+            }
+            else
+            {
+                if(child1.hasNext())
+                {
+                    left=child1.next();
+                    child2.rewind();
+                    if(child2.hasNext())
+                        right=child2.next();
+                }
+                else
+                {
+                    left=null;
+                    right=null;
+                }
+            }
+            if(res!=null)
+                return res;
+        }
         return null;
     }
 
     @Override
     public OpIterator[] getChildren() {
         // some code goes here
-        return null;
+        return new OpIterator[]{child1,child2};
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
         // some code goes here
+        this.child1=children[0];
+        this.child2=children[1];
     }
 
 }
